@@ -1,81 +1,205 @@
-# QR Designer v3.0
+# QR Designer v3.0 - AI駆動型QRコード生成プラットフォーム
 
-AIがURLの内容を理解して、最適でおしゃれなQRコードを自動生成するNext.jsアプリケーション。
+> URLを入力するだけで、AIが最適でおしゃれなQRコードを自動生成
 
-## 機能
+[![Next.js](https://img.shields.io/badge/Next.js-16-black)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
+[![Supabase](https://img.shields.io/badge/Supabase-Latest-green)](https://supabase.com/)
+[![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
-- **AI自動デザイン生成**: URLを入力するだけで、AIがサイトの内容を解析し、4種類のデザインを自動生成
-- **認証不要でQRコード生成**: 誰でもすぐにQRコードを生成可能
-- **履歴保存**: Googleアカウントでログインすると、生成したQRコードを履歴に保存
-- **無料プラン**: 1週間に1回まで生成可能
-- **有料プラン**: $4/月で無制限生成
+---
 
-## 技術スタック
+## 🎯 プロジェクト概要
 
-- **Frontend**: Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS
-- **Backend**: Next.js API Routes
-- **AI**: Google Gemini API (gemini-pro)
-- **認証・データベース**: Supabase (PostgreSQL)
-- **QRコード生成**: qrcode, sharp
-- **HTML解析**: cheerio
+QR Designer v3.0は、次世代のAI駆動型QRコード生成プラットフォームです。URLを入力するだけで、Google Gemini APIがそのサイトのコンテンツを理解し、最適なQRコードデザインを**自動で4パターン生成**します。
 
-## セットアップ
+### ユニークな特徴
 
-### 1. 環境変数の設定
+- 🤖 **AI自動デザイン**: 恐竜サイト → 恐竜モチーフのQRコード
+- ⚡ **4秒で生成**: URL入力 → 4パターンのデザイン提案
+- 💰 **コスト最適化**: Gemini Pro使用でAPI費用を90%削減
+- 🔒 **セキュア**: Supabase RLS + レート制限
+- 📊 **履歴管理**: 認証ユーザーは無制限アクセス履歴
 
-`.env.local`ファイルを作成し、以下の環境変数を設定してください：
+---
 
-```env
-GOOGLE_GEMINI_API_KEY=your-gemini-api-key
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-```
+## 🚀 クイックスタート
 
-### 2. Supabaseのセットアップ
+### 前提条件
 
-1. [Supabase](https://supabase.com)でプロジェクトを作成
-2. `supabase/schema.sql`のSQLを実行してテーブルを作成
-3. Authentication > Providers でGoogle OAuthを有効化
-4. Redirect URLsに `http://localhost:3000/api/auth/callback` を追加（本番環境のURLも追加）
+- Node.js 20.x 以上
+- npm または yarn
+- Google Gemini API キー
+- Supabaseアカウント
 
-### 3. パッケージのインストール
+### インストール
 
 ```bash
+# 依存パッケージをインストール
 npm install
+
+# 環境変数を設定
+cp .env.example .env.local
+# .env.localを編集してAPIキーを設定
 ```
 
-### 4. 開発サーバーの起動
+### 環境変数設定
+
+```.env.local
+
+# Google Gemini API
+GOOGLE_GEMINI_API_KEY=your_gemini_api_key
+
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+```
+
+### データベースセットアップ
+
+1. Supabaseプロジェクトを作成
+2. SQL Editorで`docs/04_BACKEND_SERVICES/SUPABASE_AUTH_DATABASE.md`のSQLを実行
+3. Authentication → Providers → Google OAuth を有効化
+
+### 開発サーバー起動
 
 ```bash
 npm run dev
 ```
 
-ブラウザで [http://localhost:3000](http://localhost:3000) を開いてください。
+ブラウザで http://localhost:3000 を開く
 
-## プロジェクト構造
+---
+
+## 📁 プロジェクト構造
 
 ```
 qr-designer/
-├── app/
-│   ├── api/              # API Routes
-│   │   ├── analyze-url/  # URL解析API
-│   │   ├── generate-designs/  # デザイン生成API
-│   │   ├── generate-qr/  # QRコード生成API
-│   │   ├── get-history/ # 履歴取得API
-│   │   └── auth/         # 認証コールバック
-│   ├── components/       # Reactコンポーネント
-│   ├── page.tsx         # メインページ
-│   └── layout.tsx       # ルートレイアウト
-├── lib/
-│   ├── ai/              # AI関連（Gemini API）
-│   ├── scraper/         # HTML解析（Cheerio）
-│   ├── qr/              # QRコード生成
-│   └── supabase/        # Supabaseクライアント
-├── types/               # TypeScript型定義
-└── supabase/            # データベーススキーマ
+├── app/                        # Next.js App Router
+│   ├── components/             # Reactコンポーネント
+│   ├── api/                    # APIルート
+│   ├── history/                # 履歴ページ
+│   ├── layout.tsx              # ルートレイアウト
+│   └── page.tsx                # ホームページ
+├── lib/                        # ビジネスロジック
+│   ├── ai/                     # AI統合
+│   ├── qr/                     # QR生成
+│   ├── scraper/                # スクレイピング
+│   └── supabase/               # Supabase
+├── types/                      # TypeScript型定義
+├── docs/                       # 技術ドキュメント
+├── .env.local                  # 環境変数（git無視）
+├── next.config.ts              # Next.js設定
+└── README.md
 ```
 
-## ライセンス
+---
 
-MIT
+## 🛠️ 技術スタック
+
+### フロントエンド
+- **Next.js 16** - React Server Components
+- **TypeScript 5** - 型安全性
+- **Tailwind CSS 4** - スタイリング
+- **Framer Motion** - アニメーション
+
+### バックエンド
+- **Next.js API Routes** - サーバーレス関数
+- **Supabase** - 認証・データベース
+- **PostgreSQL** - リレーショナルDB
+
+### AI & ML
+- **Google Gemini Pro** - コンテンツ分析・デザイン生成
+- **Cheerio** - HTMLパース
+
+### QR & 画像処理
+- **qrcode** - QRコード生成
+- **Sharp** - 高速画像処理
+
+---
+
+## 📖 ドキュメント
+
+詳細な技術ドキュメントは`docs/`ディレクトリにあります:
+
+### アーキテクチャ & 設計
+- [エンタープライズシステム設計](docs/00_MASTER_ARCHITECTURE/ENTERPRISE_SYSTEM_DESIGN.md)
+
+### フロントエンド
+- [Next.js 14 App Router完全実装ガイド](docs/01_NEXTJS_IMPLEMENTATION/APP_ROUTER_COMPLETE_GUIDE.md)
+- [フロントエンドコンポーネント設計](docs/08_FRONTEND/COMPONENT_ARCHITECTURE_GUIDE.md)
+
+### バックエンド & AI
+- [Gemini API統合](docs/02_AI_INTEGRATION/GEMINI_API_INTEGRATION.md)
+- [QRコード生成エンジン](docs/03_QR_GENERATION/QR_ENGINE_IMPLEMENTATION.md)
+- [Supabase認証とデータベース](docs/04_BACKEND_SERVICES/SUPABASE_AUTH_DATABASE.md)
+
+### セキュリティ & 品質
+- [セキュリティ＆コンプライアンス](docs/05_SECURITY/SECURITY_COMPLIANCE_GUIDE.md)
+- [テスト＆品質保証](docs/07_TESTING/TESTING_QA_GUIDE.md)
+
+### 運用
+- [デプロイメント＆運用ガイド](docs/06_DEPLOYMENT/COMPLETE_DEPLOYMENT_GUIDE.md)
+
+### リファレンス
+- [マスターURLリファレンス (90+ URLs)](docs/99_REFERENCE/MASTER_URL_REFERENCE.md)
+
+---
+
+## 🎨 主要機能
+
+### 1. AI自動デザイン生成
+
+URLからコンテンツを理解し、4パターンのデザインを自動生成
+
+### 2. 高度なカスタマイズ
+
+- サイズ: 256px〜4096px
+- 角の丸み: 0%〜50%
+- ロゴサイズ: 10%〜35%
+- エラー訂正レベル: L/M/Q/H
+- フォーマット: PNG/JPEG/SVG/PDF
+
+### 3. 認証とレート制限
+
+- 無料プラン: 1週間に1回生成
+- 有料プラン ($4/月): 無制限生成
+- Google OAuth: ワンクリック認証
+
+---
+
+## 🚢 デプロイメント
+
+### Vercel（推奨）
+
+```bash
+# Vercel CLIインストール
+npm install -g vercel
+
+# デプロイ
+vercel --prod
+```
+
+詳細は[デプロイメントガイド](docs/06_DEPLOYMENT/COMPLETE_DEPLOYMENT_GUIDE.md)を参照
+
+---
+
+## 🤝 コントリビューション
+
+貢献を歓迎します!
+
+1. Forkする
+2. 機能ブランチを作成
+3. 変更をコミット
+4. Pull Requestを作成
+
+---
+
+## 📝 ライセンス
+
+MIT License
+
+---
+
+**Built with ❤️ using Next.js 16 and AI**

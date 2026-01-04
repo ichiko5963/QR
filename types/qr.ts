@@ -7,6 +7,7 @@ export interface QRCodeData {
     bgColor: string
     style: string
     cornerStyle: string
+    motifKeyword: string
   }
   customization: {
     size: number
@@ -19,4 +20,3 @@ export interface QRCodeData {
   logo?: string // base64 encoded image
   format: 'png' | 'jpg' | 'svg' | 'pdf'
 }
-
