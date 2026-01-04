@@ -6,9 +6,13 @@ import URLInput from './components/URLInput'
 import DesignGrid from './components/DesignGrid'
 import QRPreview from './components/QRPreview'
 import AuthButton from './components/AuthButton'
+import FrameSelector from './components/FrameSelector'
+import PatternSelector from './components/PatternSelector'
+import CornerStyleSelector from './components/CornerStyleSelector'
 import type { URLAnalysis } from '@/types/analysis'
 import type { Design } from '@/types/design'
 import type { Customization } from '@/types/design'
+import { getAllFrameIds } from '@/lib/frameTemplates'
 
 const defaultCustomization: Customization = {
   size: 512,
@@ -45,30 +49,7 @@ const defaultCustomization: Customization = {
 }
 
 export default function Home() {
-  const frameTemplates = [
-    'none',
-    'outline',
-    'double',
-    'band-bottom',
-    'band-top',
-    'ticket',
-    'dotted',
-    'badge',
-    'ribbon-left',
-    'ribbon-right',
-    'shadow',
-    'glow',
-    'minimal'
-  ]
-
-  const patternStyles: { key: Customization['patternStyle'] | Customization['dotStyle']; label: string }[] = [
-    { key: 'square', label: '標準四角' },
-    { key: 'round', label: '角丸' },
-    { key: 'rounder', label: 'より丸' },
-    { key: 'dot', label: 'ドット' },
-    { key: 'heart', label: 'ハート' },
-    { key: 'diamond', label: '菱形' }
-  ]
+  const frameTemplates = getAllFrameIds()
 
   const [url, setUrl] = useState('')
   const [analysis, setAnalysis] = useState<URLAnalysis | null>(null)
@@ -317,25 +298,15 @@ export default function Home() {
                       {customization.frameEnabled ? 'フレームON' : 'フレームOFF'}
                     </button>
                   </div>
-                  <div className="overflow-x-auto">
-                    <div className="flex gap-2 min-w-full">
-                      {frameTemplates.map((tmpl) => (
-                        <button
-                          key={tmpl}
-                          onClick={async () =>
-                            await applyCustomizationAndRefresh((prev) => ({ ...prev, frameTemplate: tmpl }))
-                          }
-                          className={`min-w-[88px] h-20 rounded-lg border flex items-center justify-center text-xs ${
-                            customization.frameTemplate === tmpl
-                              ? 'border-purple-500 ring-2 ring-purple-200'
-                              : 'border-gray-200'
-                          }`}
-                        >
-                          {tmpl === 'none' ? 'なし' : tmpl}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  <FrameSelector
+                    selectedFrame={customization.frameTemplate || 'none'}
+                    frameColor={customization.frameGradientEnabled 
+                      ? customization.frameColor1 || '#6B4CFB'
+                      : customization.frameColor1 || '#6B4CFB'}
+                    onFrameSelect={async (frameId) =>
+                      await applyCustomizationAndRefresh((prev) => ({ ...prev, frameTemplate: frameId }))
+                    }
+                  />
                   <div className="flex items-center gap-2">
                     <label className="text-xs text-gray-600">フレームテキスト</label>
                     <input
@@ -515,27 +486,16 @@ export default function Home() {
                     <div className="text-sm font-semibold text-gray-700">QRコードパターン</div>
                     <p className="text-xs text-gray-500">QRコードのパターンを選択し、色を選びます。</p>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    {patternStyles.map((p) => (
-                      <button
-                        key={p.key}
-                        onClick={async () =>
-                          await applyCustomizationAndRefresh((prev) => ({
-                            ...prev,
-                            patternStyle: p.key as any,
-                            dotStyle: p.key as any
-                          }))
-                        }
-                        className={`h-16 rounded-lg border text-xs flex items-center justify-center ${
-                          customization.patternStyle === p.key || customization.dotStyle === p.key
-                            ? 'border-purple-500 ring-2 ring-purple-200'
-                            : 'border-gray-200'
-                        }`}
-                      >
-                        {p.label}
-                      </button>
-                    ))}
-                  </div>
+                  <PatternSelector
+                    currentPattern={customization.patternStyle || customization.dotStyle || 'square'}
+                    onPatternSelect={async (pattern) =>
+                      await applyCustomizationAndRefresh((prev) => ({
+                        ...prev,
+                        patternStyle: pattern,
+                        dotStyle: pattern as any
+                      }))
+                    }
+                  />
                   <div className="flex items-center justify-between">
                     <label className="text-xs text-gray-600">グラデーションパターンカラーを使用</label>
                     <input
@@ -636,40 +596,16 @@ export default function Home() {
                     <div className="text-sm font-semibold text-gray-700">QRコードコーナー</div>
                     <p className="text-xs text-gray-500">QRコードの角のスタイルを選択してください</p>
                   </div>
-                  <div className="grid grid-cols-3 gap-2 bg-gray-50 p-3 rounded">
-                    {(['square', 'round'] as const).map((shape) => (
-                      <button
-                        key={shape}
-                        onClick={() => handleShapeChange(shape)}
-                        className={`h-14 rounded border text-xs ${
-                          (shape === 'round' && customization.cornerRadius > 0) ||
-                          (shape === 'square' && customization.cornerRadius === 0)
-                            ? 'border-purple-500 ring-2 ring-purple-200'
-                            : 'border-gray-200'
-                        }`}
-                      >
-                        {shape === 'square' ? '角あり' : 'ラウンド'}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <label className="text-xs text-gray-600">フレーム周囲のドットの色</label>
-                    <input
-                      value={customization.patternColor1 || '#000000'}
-                      onChange={async (e) =>
-                        await applyCustomizationAndRefresh((prev) => ({ ...prev, patternColor1: e.target.value }))
-                      }
-                      className="rounded border px-2 py-1 text-sm"
-                    />
-                    <label className="text-xs text-gray-600">コーナードットの色</label>
-                    <input
-                      value={customization.patternBackground1 || '#000000'}
-                      onChange={async (e) =>
-                        await applyCustomizationAndRefresh((prev) => ({ ...prev, patternBackground1: e.target.value }))
-                      }
-                      className="rounded border px-2 py-1 text-sm"
-                    />
-                  </div>
+                  <CornerStyleSelector
+                    currentCornerFrameStyle={customization.cornerFrameStyle || 'outline'}
+                    currentCornerDotStyle={customization.cornerDotStyle || 'square'}
+                    onCornerFrameStyleSelect={async (style) =>
+                      await applyCustomizationAndRefresh((prev) => ({ ...prev, cornerFrameStyle: style as any }))
+                    }
+                    onCornerDotStyleSelect={async (style) =>
+                      await applyCustomizationAndRefresh((prev) => ({ ...prev, cornerDotStyle: style as any }))
+                    }
+                  />
                 </section>
 
                 <div className="p-3 bg-amber-50 border border-amber-200 rounded text-sm text-amber-800">
