@@ -502,23 +502,30 @@ async function composeFrameIfAny({
 }) {
   if (!customization.frameEnabled) return qrBuffer
 
-  const padding = Math.floor(size * 0.08)
+  const padding = Math.floor(size * 0.12)
   const text = (customization.frameText || '').trim()
   const template = customization.frameTemplate || 'outline'
+  
+  // Import frame templates
+  const { getFrameTemplate } = await import('@/lib/frameTemplates')
+  const frameTemplate = getFrameTemplate(template)
+  
+  if (!frameTemplate || template === 'none') return qrBuffer
+
   const gradientEnabled = customization.frameGradientEnabled
   const frameColorBase = sanitizeHex(customization.frameColor1 || customization.frameColor || palette.primary)
   const frameColorSecond = sanitizeHex(customization.frameColor2 || adjustColor(frameColorBase, -18))
   const frameBackgroundBase = customization.frameBackgroundTransparent
-    ? 'none'
+    ? 'transparent'
     : sanitizeHex(customization.frameBackground1 || customization.frameBackground || '#ffffff')
   const frameBackgroundSecond = sanitizeHex(
     customization.frameBackground2 || adjustColor(frameBackgroundBase, -12)
   )
 
   const frameWidth = size + padding * 2
-  const frameHeight = size + padding * 2 + (text ? 56 : 0)
-  const corner = Math.floor(frameWidth * 0.06)
-  const strokeWidth = Math.max(2, Math.floor(frameWidth * 0.015))
+  const frameHeight = size + padding * 2 + (text ? 60 : 0)
+  
+  const frameColor = gradientEnabled ? frameColorBase : frameColorBase
 
   const frameGrad = gradientEnabled
     ? createGradient(
@@ -543,64 +550,33 @@ async function composeFrameIfAny({
 
   const frameFill = frameGrad ? frameGrad.fill : frameColorBase
   const backgroundFill =
-    frameBackgroundBase === 'none' ? 'none' : bgGrad ? bgGrad.fill : frameBackgroundBase
+    frameBackgroundBase === 'transparent' ? 'none' : bgGrad ? bgGrad.fill : frameBackgroundBase
   const defs = [frameGrad?.defs, bgGrad?.defs].filter(Boolean).join('')
 
-  const svgParts: string[] = []
-  svgParts.push(
-    `<rect x="0" y="0" width="${frameWidth}" height="${frameHeight}" rx="${corner}" ry="${corner}" fill="${backgroundFill}" stroke="${frameFill}" stroke-width="${strokeWidth}" />`
-  )
-
-  if (template === 'band-bottom') {
-    svgParts.push(
-      `<rect x="${strokeWidth * 2}" y="${frameHeight - 48}" width="${frameWidth - strokeWidth * 4}" height="40" rx="${corner *
-        0.6}" ry="${corner * 0.6}" fill="${frameFill}" opacity="0.15" />`
-    )
-  } else if (template === 'band-top') {
-    svgParts.push(
-      `<rect x="${strokeWidth * 2}" y="${strokeWidth * 2}" width="${frameWidth - strokeWidth * 4}" height="40" rx="${corner *
-        0.6}" ry="${corner * 0.6}" fill="${frameFill}" opacity="0.15" />`
-    )
-  } else if (template === 'double') {
-    svgParts.push(
-      `<rect x="${strokeWidth * 2}" y="${strokeWidth * 2}" width="${frameWidth - strokeWidth * 4}" height="${frameHeight -
-        strokeWidth * 4}" rx="${corner * 0.8}" ry="${corner * 0.8}" fill="none" stroke="${frameFill}" stroke-width="${Math.max(
-        1,
-        strokeWidth - 1
-      )}" opacity="0.7" />`
-    )
-  } else if (template === 'ticket') {
-    const notch = corner * 0.8
-    svgParts.push(
-      `<path d="M0 ${corner} Q0 0 ${corner} 0 H ${frameWidth - corner} Q ${frameWidth} 0 ${frameWidth} ${corner} V ${frameHeight /
-        2 -
-        notch} Q ${frameWidth - corner} ${frameHeight / 2} ${frameWidth} ${frameHeight / 2 + notch} V ${frameHeight -
-        corner} Q ${frameWidth} ${frameHeight} ${frameWidth - corner} ${frameHeight} H ${corner} Q 0 ${frameHeight} 0 ${frameHeight -
-        corner} V ${frameHeight / 2 + notch} Q ${corner} ${frameHeight / 2} 0 ${frameHeight / 2 - notch} Z" fill="none" stroke="${frameFill}" stroke-width="${strokeWidth}" />`
-    )
-  } else if (template === 'dotted') {
-    svgParts.push(
-      `<rect x="${strokeWidth / 2}" y="${strokeWidth / 2}" width="${frameWidth - strokeWidth}" height="${frameHeight -
-        strokeWidth}" rx="${corner}" ry="${corner}" fill="${backgroundFill}" stroke="${frameFill}" stroke-width="${strokeWidth}" stroke-dasharray="8 6" />`
-    )
-  }
-
-  if (text) {
-    svgParts.push(
-      `<text x="50%" y="${frameHeight - 16}" text-anchor="middle" font-family="Inter, 'Noto Sans JP', sans-serif" font-size="18" fill="${frameFill}">${escapeXml(
-        text
-      )}</text>`
-    )
-  }
-
-  const frameSvg = Buffer.from(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${frameWidth}" height="${frameHeight}">
+  // Get frame SVG string from template
+  const frameSvgContent = frameTemplate.renderFrameSvgString(frameColor, frameWidth)
+  
+  // Create complete SVG
+  const frameSvgString = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${frameWidth}" height="${frameHeight}" viewBox="0 0 512 ${text ? 572 : 512}">
       <defs>${defs}</defs>
-      ${svgParts.join('\n')}
-    </svg>`
-  )
+      <rect x="0" y="0" width="512" height="${text ? 572 : 512}" fill="${backgroundFill}" />
+      <g>
+        ${frameSvgContent}
+      </g>
+      ${text ? `<text x="256" y="540" text-anchor="middle" font-family="Inter, 'Noto Sans JP', sans-serif" font-size="24" font-weight="700" fill="${frameFill}">${escapeXml(text)}</text>` : ''}
+    </svg>
+  `
 
-  const framed = await sharp(frameSvg)
+  const frameSvg = Buffer.from(frameSvgString)
+  
+  // Resize frame SVG to match expected size
+  const resizedFrameSvg = await sharp(frameSvg)
+    .resize(frameWidth, frameHeight, { fit: 'fill' })
+    .png()
+    .toBuffer()
+
+  const framed = await sharp(resizedFrameSvg)
     .composite([{
       input: qrBuffer,
       left: padding,
@@ -610,6 +586,11 @@ async function composeFrameIfAny({
     .toBuffer()
 
   return framed
+}
+
+function renderReactElementToSvgString(element: JSX.Element, size: number): string {
+  // This function is no longer needed
+  return ''
 }
 
 function escapeXml(input: string) {
